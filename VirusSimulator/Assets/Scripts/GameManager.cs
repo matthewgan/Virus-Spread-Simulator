@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -46,6 +47,11 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     InputField Input_Critical;
     [SerializeField]
+    InputField Input_NormalMaskRisk;
+    [SerializeField]
+    InputField Input_N95MaskRisk;
+
+    [SerializeField]
     Text text_Day;
     [SerializeField]
     Text[] text_DataGroup;
@@ -61,6 +67,8 @@ public class GameManager : MonoBehaviour
     Text text_EconomyLost;
     [SerializeField]
     Text text_Panic;
+    [SerializeField]
+    Text text_MaskProtectCount;
     [SerializeField]
     Text text_Bed;
     [SerializeField]
@@ -114,6 +122,7 @@ public class GameManager : MonoBehaviour
     float panic = 0;
     int currentBed = 0;
     int currentBedTotal = 100;
+    int maskProtectCount = 0;
 
     [HideInInspector]
     public bool rule0_School = false;
@@ -129,6 +138,14 @@ public class GameManager : MonoBehaviour
     public bool rule5_Independence = false;
     [HideInInspector]
     public bool rule6_TempHospital = false;
+    [HideInInspector]
+    public bool rule7_NormalMask = false;
+    [HideInInspector]
+    public bool rule8_N95Mask = false;
+
+    // Mask protect human from infection
+    float NormalMaskMeanInfRisk = 0.0f;
+    float N95MaskMeanInfRisk = 0.0f;
 
     [SerializeField]
     UILineRenderer lR_Incubation1;
@@ -165,6 +182,8 @@ public class GameManager : MonoBehaviour
         rule4_MildAtHome = toggles[4].isOn;
         rule5_Independence = toggles[5].isOn;
         rule6_TempHospital = toggles[6].isOn;
+        rule7_NormalMask = toggles[7].isOn;
+        rule8_N95Mask = toggles[8].isOn;
 
         CalculatePanic();
     }
@@ -200,21 +219,36 @@ public class GameManager : MonoBehaviour
         {
             p += 10;
         }
+        if (rule7_NormalMask)
+        {
+            p += 1;
+        }
+        if (rule8_N95Mask)
+        {
+            p += 2;
+        }
         panic += p;
     }
 
     //Controlled by button
     public void StartSimulation()
     {
-        num_Population = Mathf.Min(1000, int.Parse(Input_Population.text));
-        num_R0 = float.Parse(Input_R0.text);
+        num_Population = int.Parse(Input_Population.text);
+        Debug.Log("Simulation Population: " + num_Population);
+        num_R0 = float.Parse(Input_R0.text, CultureInfo.CreateSpecificCulture("en-GB"));
         currentBed = 0;
         currentBedTotal = int.Parse(Input_Bed.text);
         int initInfected = int.Parse(Input_InitInfected.text);
-        dayLength = Mathf.Max(0.5f, float.Parse(Input_DayLength.text));
+        dayLength = Mathf.Max(0.5f, float.Parse(Input_DayLength.text, CultureInfo.CreateSpecificCulture("en-GB")));
         lRTimer = dayLength;
         infectionRadius = 0.2f + 0.02f * 3f / dayLength + Mathf.Max(0, (num_R0 - 3.77f) * 0.01f);
-        criticalRate = float.Parse(Input_Critical.text) * 0.01f;
+        criticalRate = float.Parse(Input_Critical.text, CultureInfo.CreateSpecificCulture("en-GB")) * 0.01f;
+
+        NormalMaskMeanInfRisk = float.Parse(Input_NormalMaskRisk.text, CultureInfo.CreateSpecificCulture("en-GB")) * 0.01f;
+        Debug.Log("Normal Mask Mean Infect Risk: " + NormalMaskMeanInfRisk);
+        N95MaskMeanInfRisk = float.Parse(Input_N95MaskRisk.text, CultureInfo.CreateSpecificCulture("en-GB")) * 0.01f;
+        Debug.Log("N95 Mask Mean Infect Risk: " + N95MaskMeanInfRisk);
+
         //dayLength = 3;
         //Time.timeScale = float.Parse(Input_DayLength.text);
         dayTime = 0;
@@ -229,6 +263,8 @@ public class GameManager : MonoBehaviour
 
         panic = 0;
         CalculatePanic();
+
+        maskProtectCount = 0;
 
         lR_Incubation1.Points.Clear();
         lR_Incubation1.Points.Add(Vector2.zero);
@@ -246,16 +282,19 @@ public class GameManager : MonoBehaviour
         lR_Cured5.Points.Add(Vector2.zero);
         lR_Cured5.Points.Add(Vector2.zero);
 
-        float pS = float.Parse(Input_PStudent.text);
-        float pA = float.Parse(Input_PAdult.text);
-        float pE = float.Parse(Input_PElder.text);
+        float pS = float.Parse(Input_PStudent.text, CultureInfo.CreateSpecificCulture("en-GB"));
+        float pA = float.Parse(Input_PAdult.text, CultureInfo.CreateSpecificCulture("en-GB"));
+        float pE = float.Parse(Input_PElder.text, CultureInfo.CreateSpecificCulture("en-GB"));
         float pT = pS + pA + pE;
         ageRate_Student = pS / pT;
         ageRate_Adult = pA / pT;
         ageRate_Elder = pE / pT;
-        ageFatality_Student = float.Parse(Input_PStudent_DeathRate.text) * 0.01f;
-        ageFatality_Adult = float.Parse(Input_PAdult_DeathRate.text) * 0.01f;
-        ageFatality_Elder = float.Parse(Input_PElder_DeathRate.text) * 0.01f;
+        ageFatality_Student = float.Parse(Input_PStudent_DeathRate.text, CultureInfo.CreateSpecificCulture("en-GB")) * 0.01f;
+        Debug.Log("ageFatality_Student: " + ageFatality_Student);
+        ageFatality_Adult = float.Parse(Input_PAdult_DeathRate.text, CultureInfo.CreateSpecificCulture("en-GB")) * 0.01f;
+        Debug.Log("ageFatality_Adult: " + ageFatality_Adult);
+        ageFatality_Elder = float.Parse(Input_PElder_DeathRate.text, CultureInfo.CreateSpecificCulture("en-GB")) * 0.01f;
+        Debug.Log("ageFatality_Elder: " + ageFatality_Elder);
 
         foreach (Human human in population)
         {
@@ -488,6 +527,7 @@ public class GameManager : MonoBehaviour
 
         panic = 0;
 
+        maskProtectCount = 0;
 
         foreach (Human human in population)
         {
@@ -565,6 +605,30 @@ public class GameManager : MonoBehaviour
         if (population_Normal0.Contains(human))
         {
             population_Normal0.Remove(human);
+        }
+    }
+
+    void InfectWithMaskProtect(Human human)
+    {
+        float mask_mean_risk = 1.0f;
+        if (rule7_NormalMask)
+        { 
+            mask_mean_risk = NormalMaskMeanInfRisk;
+        }
+        else if (rule8_N95Mask) 
+        {   
+            mask_mean_risk = N95MaskMeanInfRisk;
+        }
+        
+        // random chance to be infected even wearing a mask
+        if (Random.value <= mask_mean_risk)
+        {
+            Infected(human);
+        }
+        else
+        {
+            // mask protected
+            maskProtectCount = maskProtectCount + 1;
         }
     }
 
@@ -669,6 +733,7 @@ public class GameManager : MonoBehaviour
             text_FatalityRate_Elder.text = PercentageConverter((float)ageNum_Elder_Death / Mathf.Max(1, ageNum_Elder)) + "%";
             text_EconomyLost.text = "" + Mathf.RoundToInt(economyLost);
             text_Panic.text = "" + Mathf.RoundToInt(panic);
+            text_MaskProtectCount.text = "" + maskProtectCount;
             text_Bed.text = currentBed + "/" + currentBedTotal;
 
             for (int i = 0; i < population_Incubation1.Count; i++)
@@ -694,7 +759,7 @@ public class GameManager : MonoBehaviour
                     {
                         if(Vector3.Distance(human.transform.position, humanNormal.transform.position) < infectionRadius)
                         {
-                            Infected(humanNormal);
+                            InfectWithMaskProtect(humanNormal);
                             break;
                         }
                     }
@@ -773,7 +838,7 @@ public class GameManager : MonoBehaviour
                     {
                         if (Vector3.Distance(human.transform.position, humanNormal.transform.position) < infectionRadius)
                         {
-                            Infected(humanNormal);
+                            InfectWithMaskProtect(humanNormal);
                             break;
                         }
                     }
@@ -842,7 +907,7 @@ public class GameManager : MonoBehaviour
                     {
                         if (Vector3.Distance(human.transform.position, humanNormal.transform.position) < infectionRadius * 2)
                         {
-                            Infected(humanNormal);
+                            InfectWithMaskProtect(humanNormal);
                             break;
                         }
                     }
