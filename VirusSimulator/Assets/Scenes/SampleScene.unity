@@ -11247,7 +11247,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 2100000, guid: e09a1bf3da4adcd4c91944afd4ea500d, type: 2}
-  m_Color: {r: 0.20784315, g: 0.6117647, b: 0, a: 1}
+  m_Color: {r: 0.105882354, g: 0.6901961, b: 0.8784314, a: 1}
   m_RaycastTarget: 0
   m_Texture: {fileID: 0}
   m_UVRect:
